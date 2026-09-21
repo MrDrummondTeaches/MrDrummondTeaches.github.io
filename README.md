@@ -171,8 +171,8 @@
                     <canvas id="canvas1"></canvas>
                 </div>
                 <div class="sim-content">
-                    <h2 class="sim-title">Diffusion in a test tube</h2>
-                    <p class="sim-description">2D N-body gravitational interaction model with adjustable mass and velocity vectors.</p>
+                    <h2 class="sim-title">Diffusion in a test tube (Work in Progress)</h2>
+                    <p class="sim-description">2D diffusion model with adjustable size and velocity vectors.</p>
                     <div class="sim-actions">
                         <a href="simulations/gravity.html" class="btn btn-primary">Launch</a>
                         <a href="https://github.com/yourusername/your-repo/blob/main/simulations/gravity.html" class="btn btn-secondary">Source</a>
@@ -201,8 +201,8 @@
                     <canvas id="canvas3"></canvas>
                 </div>
                 <div class="sim-content">
-                    <h2 class="sim-title">Grid Fluid Dynamics</h2>
-                    <p class="sim-description">Eulerian grid-based fluid simulation with real-time velocity vector field controls.</p>
+                    <h2 class="sim-title">Not sure yet</h2>
+                    <p class="sim-description">Sim 3.... Whatever that will be</p>
                     <div class="sim-actions">
                         <a href="simulations/fluid.html" class="btn btn-primary">Launch</a>
                         <a href="https://github.com/yourusername/your-repo/blob/main/simulations/fluid.html" class="btn btn-secondary">Source</a>
