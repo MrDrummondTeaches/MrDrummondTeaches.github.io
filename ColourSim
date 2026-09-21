@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Additive Color & Perception Simulation</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-blue: #3b82f6;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (min-width: 900px) {
+            .main-container {
+                display: grid;
+                grid-template-columns: 340px 1fr;
+            }
+        }
+
+        .control-panel {
+            background-color: var(--panel-bg);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .slider-label-red { color: #f87171; }
+        .slider-label-green { color: #4ade80; }
+        .slider-label-blue { color: #60a5fa; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 44px; /* Minimum touch target requirement */
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #334155;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 26px;
+            width: 26px;
+            border-radius: 50%;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        #redSlider::-webkit-slider-thumb { background: var(--accent-red); }
+        #greenSlider::-webkit-slider-thumb { background: var(--accent-green); }
+        #blueSlider::-webkit-slider-thumb { background: var(--accent-blue); }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            min-height: 44px; /* Minimum touch target */
+            min-width: 44px;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: none;
+            background-color: #334155;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        button:hover {
+            background-color: #475569;
+        }
+
+        button.primary {
+            background-color: #2563eb;
+        }
+
+        button.primary:hover {
+            background-color: #3b82f6;
+        }
+
+        .data-panel {
+            background-color: #090d16;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #334155;
+            font-family: monospace;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .data-value {
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .canvas-container {
+            position: relative;
+            background-color: #050811;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            min-height: 450px;
+            display: flex;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Light & Color Perception Simulation</h1>
+        <p>Explore additive RGB light mixing and retinal cone receptor excitation</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Control Sidebar -->
+        <div class="control-panel">
+            <!-- Red Slider -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span class="slider-label-red">Red Flashlight</span>
+                    <span id="redVal">255 (100%)</span>
+                </div>
+                <input type="range" id="redSlider" min="0" max="255" value="255">
+            </div>
+
+            <!-- Green Slider -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span class="slider-label-green">Green Flashlight</span>
+                    <span id="greenVal">0 (0%)</span>
+                </div>
+                <input type="range" id="greenSlider" min="0" max="255" value="0">
+            </div>
+
+            <!-- Blue Slider -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span class="slider-label-blue">Blue Flashlight</span>
+                    <span id="blueVal">0 (0%)</span>
+                </div>
+                <input type="range" id="blueSlider" min="0" max="255" value="0">
+            </div>
+
+            <!-- Simulation Controls -->
+            <div class="btn-group">
+                <button id="playPauseBtn" class="primary">Pause</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+
+            <!-- Quick Preset Buttons -->
+            <div class="btn-group">
+                <button id="presetYellow" style="font-size: 0.8rem;">Yellow</button>
+                <button id="presetCyan" style="font-size: 0.8rem;">Cyan</button>
+                <button id="presetMagenta" style="font-size: 0.8rem;">Magenta</button>
+                <button id="presetWhite" style="font-size: 0.8rem;">White</button>
+            </div>
+
+            <!-- Optical Filter Selector -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span style="color: #38bdf8;">Optical Light Filter</span>
+                    <span id="filterLabel" style="color: #94a3b8; font-size: 0.85rem;">Clear (No Filter)</span>
+                </div>
+                <select id="filterSelect" style="width: 100%; min-height: 44px; padding: 0.5rem; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <option value="none">Clear / No Filter (Transmits All)</option>
+                    <optgroup label="Primary Color Filters">
+                        <option value="red">Red Filter (Red Only)</option>
+                        <option value="green">Green Filter (Green Only)</option>
+                        <option value="blue">Blue Filter (Blue Only)</option>
+                    </optgroup>
+                    <optgroup label="Secondary Color Filters">
+                        <option value="yellow">Yellow Filter (Red & Green)</option>
+                        <option value="cyan">Cyan Filter (Green & Blue)</option>
+                        <option value="magenta">Magenta Filter (Red & Blue)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Live Educational Data Readout -->
+            <div class="data-panel">
+                <div class="data-row">
+                    <span>Perceived Color:</span>
+                    <span class="data-value" id="dataColorName">Red</span>
+                </div>
+                <div class="data-row">
+                    <span>Filter Status:</span>
+                    <span class="data-value" id="dataFilterStatus" style="color: #a855f7;">Passes All</span>
+                </div>
+                <hr style="border-color: #334155; margin: 0.2rem 0;">
+                <div class="data-row">
+                    <span>L-Cone (Long/Red):</span>
+                    <span class="data-value" id="dataLCone">100%</span>
+                </div>
+                <div class="data-row">
+                    <span>M-Cone (Mid/Green):</span>
+                    <span class="data-value" id="dataMCone">0%</span>
+                </div>
+                <div class="data-row">
+                    <span>S-Cone (Short/Blue):</span>
+                    <span class="data-value" id="dataSCone">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Display Area -->
+        <div class="canvas-container" id="canvasWrapper">
+            <canvas id="simCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // // CONFIG
+        // ==========================================
+        const CONFIG = {
+            // Flashlight Color Intensities (0 - 255)
+            red: 255,
+            green: 0,
+            blue: 0,
+
+            // Filter Configuration
+            filter: 'none', // 'none', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta'
+
+            // Visual Settings
+            beamOpacity: 0.55,
+            
+            // Initial Simulation State
+            isRunning: true,
+            
+            // Colors
+            bgColor: '#050811'
+        };
+
+        // Helper: Get filter transmission multipliers (0 to 1) for RGB channels
+        function getFilterTransmission(filterType) {
+            switch (filterType) {
+                case 'red':     return { r: 1, g: 0, b: 0, color: '#ef4444', name: 'Red Filter (Absorbs G, B)' };
+                case 'green':   return { r: 0, g: 1, b: 0, color: '#22c55e', name: 'Green Filter (Absorbs R, B)' };
+                case 'blue':    return { r: 0, g: 0, b: 1, color: '#3b82f6', name: 'Blue Filter (Absorbs R, G)' };
+                case 'yellow':  return { r: 1, g: 1, b: 0, color: '#eab308', name: 'Yellow Filter (Absorbs B)' };
+                case 'cyan':    return { r: 0, g: 1, b: 1, color: '#06b6d4', name: 'Cyan Filter (Absorbs R)' };
+                case 'magenta': return { r: 1, g: 0, b: 1, color: '#d946ef', name: 'Magenta Filter (Absorbs G)' };
+                default:        return { r: 1, g: 1, b: 1, color: 'rgba(255,255,255,0.2)', name: 'Clear (Passes All)' };
+            }
+        }
+
+        // ==========================================
+        // // PHYSICS & LOGIC ENGINE
+        // ==========================================
+        let canvas, ctx;
+        let lastTime = 0;
+
+        // Helper: Convert RGB values to HEX string
+        function rgbToHex(r, g, b) {
+            const toHex = c => Math.round(c).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+        }
+
+        // Helper: Identify common color name based on RGB balance
+        function getPerceivedColorName(r, g, b) {
+            if (r === 0 && g === 0 && b === 0) return "Darkness (Black)";
+            if (r > 200 && g > 200 && b > 200) return "White Light";
+            if (r > 200 && g > 200 && b < 80) return "Yellow";
+            if (r < 80 && g > 200 && b > 200) return "Cyan";
+            if (r > 200 && g < 80 && b > 200) return "Magenta";
+            if (r > 200 && g < 100 && b < 100) return "Red";
+            if (r < 100 && g > 200 && b < 100) return "Green";
+            if (r < 100 && g < 100 && b > 200) return "Blue";
+            if (r > 180 && g > 100 && b < 80) return "Orange";
+            return "Mixed Shade";
+        }
+
+        function updatePhysics(dt, lightSources, eyeTarget) {
+            // Physics calculations
+        }
+
+        // ==========================================
+        // // RENDERING
+        // ==========================================
+        function render() {
+            const width = canvas.width / (window.devicePixelRatio || 1);
+            const height = canvas.height / (window.devicePixelRatio || 1);
+
+            // Clear Background
+            ctx.fillStyle = CONFIG.bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            // Layout Anchor Coordinates
+            const filterX = width * 0.42;
+            const eyeTarget = { x: width * 0.72, y: height * 0.55 };
+            const headCenter = { x: width * 0.75, y: height * 0.52 };
+            const lightSources = [
+                { x: width * 0.12, y: height * 0.25, channel: 'red', val: CONFIG.red },
+                { x: width * 0.12, y: height * 0.55, channel: 'green', val: CONFIG.green },
+                { x: width * 0.12, y: height * 0.85, channel: 'blue', val: CONFIG.blue }
+            ];
+
+            // Calculate Filtered Transmission Values
+            const filterTrans = getFilterTransmission(CONFIG.filter);
+            const filteredR = CONFIG.red * filterTrans.r;
+            const filteredG = CONFIG.green * filterTrans.g;
+            const filteredB = CONFIG.blue * filterTrans.b;
+
+            // 1. DRAW ADDITIVE LIGHT BEAMS BEFORE & AFTER FILTER
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+
+            // --- A. Beams from Flashlights to Filter ---
+            lightSources.forEach(src => {
+                if (src.val > 0) {
+                    const alpha = (src.val / 255) * CONFIG.beamOpacity;
+                    
+                    if (src.channel === 'red') ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+                    else if (src.channel === 'green') ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                    else if (src.channel === 'blue') ctx.fillStyle = `rgba(0, 0, 255, ${alpha})`;
+
+                    ctx.beginPath();
+                    ctx.moveTo(src.x, src.y - 12);
+                    // Intercept points at the filter plane
+                    const filterUpperY = src.y - 12 + (eyeTarget.y - 5 - (src.y - 12)) * ((filterX - src.x) / (eyeTarget.x - src.x));
+                    const filterLowerY = src.y + 12 + (eyeTarget.y + 5 - (src.y + 12)) * ((filterX - src.x) / (eyeTarget.x - src.x));
+                    
+                    ctx.lineTo(filterX, filterUpperY);
+                    ctx.lineTo(filterX, filterLowerY);
+                    ctx.lineTo(src.x, src.y + 12);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+
+            // --- B. Filtered Beams from Filter to Eye ---
+            lightSources.forEach(src => {
+                let transmittedVal = 0;
+                if (src.channel === 'red') transmittedVal = filteredR;
+                else if (src.channel === 'green') transmittedVal = filteredG;
+                else if (src.channel === 'blue') transmittedVal = filteredB;
+
+                if (transmittedVal > 0) {
+                    const alpha = (transmittedVal / 255) * CONFIG.beamOpacity;
+                    
+                    if (src.channel === 'red') ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+                    else if (src.channel === 'green') ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                    else if (src.channel === 'blue') ctx.fillStyle = `rgba(0, 0, 255, ${alpha})`;
+
+                    const filterUpperY = src.y - 12 + (eyeTarget.y - 5 - (src.y - 12)) * ((filterX - src.x) / (eyeTarget.x - src.x));
+                    const filterLowerY = src.y + 12 + (eyeTarget.y + 5 - (src.y + 12)) * ((filterX - src.x) / (eyeTarget.x - src.x));
+
+                    ctx.beginPath();
+                    ctx.moveTo(filterX, filterUpperY);
+                    ctx.lineTo(eyeTarget.x, eyeTarget.y - 5);
+                    ctx.lineTo(eyeTarget.x, eyeTarget.y + 5);
+                    ctx.lineTo(filterX, filterLowerY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+            ctx.restore();
+
+            // 2. DRAW FLASHLIGHTS
+            lightSources.forEach((src, idx) => {
+                const colors = ['#ef4444', '#22c55e', '#3b82f6'];
+                
+                ctx.save();
+                ctx.translate(src.x, src.y);
+                const angle = Math.atan2(eyeTarget.y - src.y, eyeTarget.x - src.x);
+                ctx.rotate(angle);
+
+                // Body
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(-40, -14, 50, 28);
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-35, -12, 10, 24);
+
+                // Lens Rim
+                ctx.fillStyle = colors[idx];
+                ctx.fillRect(10, -18, 12, 36);
+
+                // Bulb / Glow Indicator
+                ctx.fillStyle = src.val > 0 ? colors[idx] : '#1e293b';
+                ctx.beginPath();
+                ctx.arc(22, 0, 8, -Math.PI/2, Math.PI/2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+
+            // 3. DRAW OPTICAL FILTER SLAB
+            ctx.save();
+            const filterHeight = height * 0.75;
+            const filterY = height * 0.125;
+
+            // Glass frame / Holder
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.fillRect(filterX - 6, filterY - 10, 12, filterHeight + 20);
+            ctx.strokeRect(filterX - 6, filterY - 10, 12, filterHeight + 20);
+
+            // Filter Glass Body
+            if (CONFIG.filter === 'none') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            } else {
+                ctx.fillStyle = filterTrans.color;
+                ctx.strokeStyle = '#ffffff';
+            }
+            ctx.globalAlpha = 0.65;
+            ctx.fillRect(filterX - 4, filterY, 8, filterHeight);
+            ctx.globalAlpha = 1.0;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(filterX - 4, filterY, 8, filterHeight);
+
+            // Filter Label
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("OPTICAL FILTER", filterX, filterY - 16);
+            ctx.fillStyle = filterTrans.color === 'rgba(255,255,255,0.2)' ? '#94a3b8' : filterTrans.color;
+            ctx.fillText(filterTrans.name.split(' ')[0] + " Filter", filterX, filterY + filterHeight + 16);
+            ctx.restore();
+
+            // 4. DRAW EYE & OPTIC NERVE
+            ctx.save();
+            const hx = headCenter.x;
+            const hy = headCenter.y;
+
+            // --- DRAW ANATOMICAL EYE ---
+            ctx.save();
+            // Outer Sclera (White of Eye)
+            ctx.fillStyle = '#f8fafc';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(eyeTarget.x, eyeTarget.y, 16, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cornea
+            ctx.beginPath();
+            ctx.arc(eyeTarget.x - 10, eyeTarget.y, 8, -Math.PI * 0.4, Math.PI * 0.4, false);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Iris (Displays perceived incoming FILTERED light color)
+            ctx.fillStyle = `rgb(${filteredR}, ${filteredG}, ${filteredB})`;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(eyeTarget.x - 6, eyeTarget.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Pupil
+            ctx.fillStyle = '#050811';
+            ctx.beginPath();
+            ctx.arc(eyeTarget.x - 6, eyeTarget.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // --- REALISTIC ANATOMICAL OPTIC NERVE BUNDLE ---
+            const exitX = eyeTarget.x + 14;
+            const exitY = eyeTarget.y;
+            const brainX = hx - 10;
+            const brainY = hy - 92;
+            const targetNerveX = brainX + 4;
+            const targetNerveY = brainY + 12;
+
+            const cp1x = exitX + 30;
+            const cp1y = exitY + 10;
+            const cp2x = targetNerveX - 15;
+            const cp2y = targetNerveY + 25;
+
+            ctx.fillStyle = '#334155';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+
+            ctx.beginPath();
+            ctx.moveTo(exitX, exitY - 7);
+            ctx.bezierCurveTo(cp1x, cp1y - 7, cp2x, cp2y - 5, targetNerveX - 4, targetNerveY - 4);
+            ctx.lineTo(targetNerveX + 4, targetNerveY + 4);
+            ctx.bezierCurveTo(cp2x, cp2y + 5, cp1x, cp1y + 7, exitX, exitY + 7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner Neural Axon Fibers
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(exitX, exitY - 3);
+            ctx.bezierCurveTo(cp1x, cp1y - 3, cp2x, cp2y - 2, targetNerveX - 2, targetNerveY - 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(exitX, exitY);
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, targetNerveX, targetNerveY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(exitX, exitY + 3);
+            ctx.bezierCurveTo(cp1x, cp1y + 3, cp2x, cp2y + 2, targetNerveX + 2, targetNerveY + 2);
+            ctx.stroke();
+
+            // Animated Action Potential Signals (Traveling filtered light impulses)
+            if (CONFIG.isRunning && (filteredR > 0 || filteredG > 0 || filteredB > 0)) {
+                const time = Date.now() * 0.0025;
+                ctx.fillStyle = `rgb(${filteredR}, ${filteredG}, ${filteredB})`;
+                ctx.shadowColor = `rgb(${filteredR}, ${filteredG}, ${filteredB})`;
+                ctx.shadowBlur = 8;
+
+                for (let i = 0; i < 3; i++) {
+                    const t = ((time + i * 0.33) % 1);
+                    const u = 1 - t;
+                    const tt = t * t;
+                    const uu = u * u;
+                    const uuu = uu * u;
+                    const ttt = tt * t;
+
+                    const px = uuu * exitX + 3 * uu * t * cp1x + 3 * u * tt * cp2x + ttt * targetNerveX;
+                    const py = uuu * exitY + 3 * uu * t * cp1y + 3 * u * tt * cp2y + ttt * targetNerveY;
+
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+
+            // --- DRAW BRAIN GRAPHIC ---
+            ctx.save();
+            const bx = brainX;
+            const by = brainY;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(bx - 26, by - 4);
+            ctx.bezierCurveTo(bx - 32, by - 18, bx - 18, by - 30, bx - 4, by - 26);
+            ctx.bezierCurveTo(bx + 10, by - 30, bx + 22, by - 22, bx + 26, by - 10);
+            ctx.bezierCurveTo(bx + 32, by, bx + 28, by + 14, bx + 18, by + 18);
+            ctx.bezierCurveTo(bx + 20, by + 28, bx + 6, by + 28, bx, by + 20);
+            ctx.bezierCurveTo(bx - 12, by + 22, bx - 26, by + 12, bx - 26, by - 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Internal Brain Gyri Folds
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(bx - 18, by - 12);
+            ctx.bezierCurveTo(bx - 10, by - 18, bx - 4, by - 10, bx - 12, by - 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(bx - 4, by - 22);
+            ctx.bezierCurveTo(bx + 4, by - 16, bx + 2, by - 4, bx - 6, by + 6);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(bx + 12, by - 18);
+            ctx.bezierCurveTo(bx + 18, by - 10, bx + 14, by + 2, bx + 20, by + 8);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(bx + 4, by + 20);
+            ctx.quadraticCurveTo(bx + 12, by + 18, bx + 16, by + 24);
+            ctx.stroke();
+
+            // Visual Cortex Neural Active Glow
+            if (filteredR > 0 || filteredG > 0 || filteredB > 0) {
+                ctx.fillStyle = `rgba(${filteredR}, ${filteredG}, ${filteredB}, 0.35)`;
+                ctx.beginPath();
+                ctx.arc(bx + 16, by + 2, 9, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // 5. DRAW THOUGHT BUBBLE
+            const bubbleX = hx + 50;
+            const bubbleY = hy - 250;
+
+            const brainTopX = brainX + 5;
+            const brainTopY = brainY - 26;
+            const bubbleBottomX = bubbleX - 30;
+            const bubbleBottomY = bubbleY + 40;
+
+            const c1x = brainTopX + (bubbleBottomX - brainTopX) * 0.25;
+            const c1y = brainTopY + (bubbleBottomY - brainTopY) * 0.25;
+
+            const c2x = brainTopX + (bubbleBottomX - brainTopX) * 0.55;
+            const c2y = brainTopY + (bubbleBottomY - brainTopY) * 0.55;
+
+            const c3x = brainTopX + (bubbleBottomX - brainTopX) * 0.82;
+            const c3y = brainTopY + (bubbleBottomY - brainTopY) * 0.82;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.arc(c1x, c1y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(c2x, c2y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(c3x, c3y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Main Thought Bubble
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(bubbleX, bubbleY, 72, 50, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Brain's Perceived Combined Color Display based on FILTERED light
+            ctx.fillStyle = `rgb(${filteredR}, ${filteredG}, ${filteredB})`;
+            ctx.beginPath();
+            ctx.ellipse(bubbleX, bubbleY, 54, 35, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Thought Bubble Label
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("Mind's Eye", bubbleX, bubbleY + 68);
+
+            ctx.restore();
+        }
+
+        // Main Animation Loop
+        function animate(currentTime) {
+            if (!lastTime) lastTime = currentTime;
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            const width = canvas.width / (window.devicePixelRatio || 1);
+            const height = canvas.height / (window.devicePixelRatio || 1);
+            const eyeTarget = { x: width * 0.72, y: height * 0.55 };
+            const lightSources = [
+                { x: width * 0.12, y: height * 0.25 },
+                { x: width * 0.12, y: height * 0.55 },
+                { x: width * 0.12, y: height * 0.85 }
+            ];
+
+            updatePhysics(dt, lightSources, eyeTarget);
+            render();
+
+            requestAnimationFrame(animate);
+        }
+
+        // ==========================================
+        // // UI & EVENTS
+        // ==========================================
+        function updateDataUI() {
+            // Update Slider Text Displays
+            const redVal = document.getElementById('redVal');
+            if (redVal) redVal.innerText = `(${Math.round(CONFIG.red/2.55)}%)`;
+            
+            const greenVal = document.getElementById('greenVal');
+            if (greenVal) greenVal.innerText = `(${Math.round(CONFIG.green/2.55)}%)`;
+            
+            const blueVal = document.getElementById('blueVal');
+            if (blueVal) blueVal.innerText = `(${Math.round(CONFIG.blue/2.55)}%)`;
+
+            // Calculate Filtered Transmission Values
+            const filterTrans = getFilterTransmission(CONFIG.filter);
+            const filteredR = CONFIG.red * filterTrans.r;
+            const filteredG = CONFIG.green * filterTrans.g;
+            const filteredB = CONFIG.blue * filterTrans.b;
+
+            // Update Educational Data Panel
+            const dataColorName = document.getElementById('dataColorName');
+            if (dataColorName) dataColorName.innerText = getPerceivedColorName(filteredR, filteredG, filteredB);
+
+            const filterLabel = document.getElementById('filterLabel');
+            if (filterLabel) filterLabel.innerText = filterTrans.name.split(' ')[0];
+
+            const dataFilterStatus = document.getElementById('dataFilterStatus');
+            if (dataFilterStatus) {
+                dataFilterStatus.innerText = filterTrans.name;
+                dataFilterStatus.style.color = filterTrans.color === 'rgba(255,255,255,0.2)' ? '#38bdf8' : filterTrans.color;
+            }
+
+            // Transmitted Cone Excitation Estimates
+            const dataLCone = document.getElementById('dataLCone');
+            if (dataLCone) dataLCone.innerText = `${Math.round((filteredR / 255) * 100)}%`;
+            
+            const dataMCone = document.getElementById('dataMCone');
+            if (dataMCone) dataMCone.innerText = `${Math.round((filteredG / 255) * 100)}%`;
+            
+            const dataSCone = document.getElementById('dataSCone');
+            if (dataSCone) dataSCone.innerText = `${Math.round((filteredB / 255) * 100)}%`;
+        }
+
+        function setupCanvas() {
+            canvas = document.getElementById('simCanvas');
+            ctx = canvas.getContext('2d');
+            
+            const wrapper = document.getElementById('canvasWrapper');
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = wrapper.getBoundingClientRect();
+                
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+        }
+
+        function setupEventListeners() {
+            // Sliders
+            const redSlider = document.getElementById('redSlider');
+            const greenSlider = document.getElementById('greenSlider');
+            const blueSlider = document.getElementById('blueSlider');
+
+            redSlider.addEventListener('input', (e) => {
+                CONFIG.red = parseInt(e.target.value);
+                updateDataUI();
+            });
+
+            greenSlider.addEventListener('input', (e) => {
+                CONFIG.green = parseInt(e.target.value);
+                updateDataUI();
+            });
+
+            blueSlider.addEventListener('input', (e) => {
+                CONFIG.blue = parseInt(e.target.value);
+                updateDataUI();
+            });
+
+            // Optical Filter Selector Listener
+            const filterSelect = document.getElementById('filterSelect');
+            filterSelect.addEventListener('change', (e) => {
+                CONFIG.filter = e.target.value;
+                updateDataUI();
+            });
+
+            // Play/Pause Button
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            playPauseBtn.addEventListener('click', () => {
+                CONFIG.isRunning = !CONFIG.isRunning;
+                playPauseBtn.innerText = CONFIG.isRunning ? "Pause" : "Play";
+                playPauseBtn.classList.toggle('primary', CONFIG.isRunning);
+            });
+
+            // Reset Button
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                CONFIG.red = 255;
+                CONFIG.green = 0;
+                CONFIG.blue = 0;
+                CONFIG.filter = 'none';
+                redSlider.value = 255;
+                greenSlider.value = 0;
+                blueSlider.value = 0;
+                filterSelect.value = 'none';
+                CONFIG.isRunning = true;
+                playPauseBtn.innerText = "Pause";
+                playPauseBtn.classList.add('primary');
+                updateDataUI();
+            });
+
+            // Preset Buttons
+            const setPreset = (r, g, b) => {
+                CONFIG.red = r; CONFIG.green = g; CONFIG.blue = b;
+                redSlider.value = r; greenSlider.value = g; blueSlider.value = b;
+                updateDataUI();
+            };
+
+            document.getElementById('presetYellow').addEventListener('click', () => setPreset(255, 255, 0));
+            document.getElementById('presetCyan').addEventListener('click', () => setPreset(0, 255, 255));
+            document.getElementById('presetMagenta').addEventListener('click', () => setPreset(255, 0, 255));
+            document.getElementById('presetWhite').addEventListener('click', () => setPreset(255, 255, 255));
+        }
+
+        // Initialize Simulation on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            setupCanvas();
+            setupEventListeners();
+            updateDataUI();
+            requestAnimationFrame(animate);
+        });
+    </script>
+</body>
+</html>
