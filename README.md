@@ -190,7 +190,7 @@
                     <h2 class="sim-title">Simulating Light, colours and how they interact with filters</h2>
                     <p class="sim-description">Chaotic motion simulation solved using numerical integration techniques.</p>
                     <div class="sim-actions">
-                        <a href="simulations/pendulum.html" class="btn btn-primary">Launch</a>
+                        <a href="ColourSim.html" class="btn btn-primary">Launch</a>
                         <a href="" class="btn btn-secondary">Source</a>
                     </div>
                 </div>
