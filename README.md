@@ -160,7 +160,7 @@
 
     <header>
         <h1>Interactive Simulations</h1>
-        <p>A collection of web-based physics, mathematical, and algorithmic models.</p>
+        <p>A work in progress that will hopefully include a series of simulations useful in Middle and High school across a range of curricula.</p>
     </header>
 
     <div class="container">
@@ -172,7 +172,7 @@
                     <canvas id="canvas1"></canvas>
                 </div>
                 <div class="sim-content">
-                    <h2 class="sim-title">Particle Gravity</h2>
+                    <h2 class="sim-title">Diffusion in a test tube</h2>
                     <p class="sim-description">2D N-body gravitational interaction model with adjustable mass and velocity vectors.</p>
                     <div class="sim-actions">
                         <a href="simulations/gravity.html" class="btn btn-primary">Launch</a>
@@ -187,11 +187,11 @@
                     <canvas id="canvas2"></canvas>
                 </div>
                 <div class="sim-content">
-                    <h2 class="sim-title">Double Pendulum</h2>
+                    <h2 class="sim-title">Simulating Light, colours and how they interact with filters</h2>
                     <p class="sim-description">Chaotic motion simulation solved using numerical integration techniques.</p>
                     <div class="sim-actions">
                         <a href="simulations/pendulum.html" class="btn btn-primary">Launch</a>
-                        <a href="https://github.com/yourusername/your-repo/blob/main/simulations/pendulum.html" class="btn btn-secondary">Source</a>
+                        <a href="[Color_perception_sim with filter.html](https://github.com/MrDrummondTeaches/ColourSim/blob/89848aa240bfc6da28b3664db03cc6dfa940de2e/Color_perception_sim%20with%20filter.html)" class="btn btn-secondary">Source</a>
                     </div>
                 </div>
             </article>
