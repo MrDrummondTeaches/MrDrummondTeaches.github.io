@@ -191,7 +191,7 @@
                     <p class="sim-description">Chaotic motion simulation solved using numerical integration techniques.</p>
                     <div class="sim-actions">
                         <a href="simulations/pendulum.html" class="btn btn-primary">Launch</a>
-                        <a href="[Color_perception_sim with filter.html](https://github.com/MrDrummondTeaches/ColourSim/blob/89848aa240bfc6da28b3664db03cc6dfa940de2e/Color_perception_sim%20with%20filter.html)" class="btn btn-secondary">Source</a>
+                        <a href="" class="btn btn-secondary">Source</a>
                     </div>
                 </div>
             </article>
