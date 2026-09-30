@@ -171,10 +171,10 @@
                     <canvas id="canvas1"></canvas>
                 </div>
                 <div class="sim-content">
-                    <h2 class="sim-title">Diffusion in a test tube (Work in Progress)</h2>
-                    <p class="sim-description">2D diffusion model with adjustable size and velocity vectors.</p>
+                    <h2 class="sim-title">1D Conductive Heat Transfer</h2>
+                    <p class="sim-description">1D 1D Conductive Heat Transfer with adjustable material parameters.</p>
                     <div class="sim-actions">
-                        <a href="simulations/gravity.html" class="btn btn-primary">Launch</a>
+                        <a href="1d_thermal_conduction_simulation.html" class="btn btn-primary">Launch</a>
                         <a href="https://github.com/yourusername/your-repo/blob/main/simulations/gravity.html" class="btn btn-secondary">Source</a>
                     </div>
                 </div>
