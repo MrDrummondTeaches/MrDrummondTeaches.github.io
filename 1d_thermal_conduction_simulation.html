@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1D Parallel Rod Thermal Conduction Simulation</title>
+  <!-- Tailwind CSS CDN for responsive dark-mode styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons for UI controls -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+    }
+    .touch-target {
+      min-width: 44px;
+      min-height: 44px;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-md">
+    <div class="flex items-center space-x-3">
+      <div class="p-2.5 bg-rose-600 rounded-xl text-white shadow-lg shadow-rose-950/50">
+        <i class="fa-solid fa-temperature-arrow-up text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold leading-tight text-white flex items-center gap-2">
+          1D Thermal Conduction Lab
+          <span class="text-xs font-normal text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded border border-rose-800/60">Parallel Rod Physics</span>
+        </h1>
+        <p class="text-xs text-slate-400">Comparing heat transfer rates across distinct materials over time</p>
+      </div>
+    </div>
+
+    <!-- Preset Material Pairs -->
+    <div class="flex items-center gap-2 overflow-x-auto py-1">
+      <span class="text-xs text-slate-400 font-medium mr-1 hidden md:inline"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i>Presets:</span>
+      <button id="presetCuSt" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition">Copper vs Steel</button>
+      <button id="presetAlGl" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition">Aluminum vs Glass</button>
+      <button id="presetCuAl" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition">Copper vs Aluminum</button>
+      <button id="presetBrWd" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition">Brass vs Wood</button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout Grid -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-3 md:p-4 max-w-[1920px] mx-auto w-full">
+    
+    <!-- Left Column: Simulation Canvas & Playback Bar -->
+    <div class="lg:col-span-8 xl:col-span-9 flex flex-col space-y-3">
+      
+      <!-- Canvas Display Viewport -->
+      <div id="canvasContainer" class="relative flex-1 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-inner min-h-[420px] lg:min-h-[560px]">
+        
+        <canvas id="simCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- Dynamic Status Banner -->
+        <div id="statusBanner" class="absolute top-4 left-4 bg-slate-950/90 backdrop-blur border border-slate-800 text-xs text-slate-300 px-3 py-2 rounded-lg shadow-lg flex items-center space-x-2.5 pointer-events-none">
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-500" id="statusDot"></span>
+          <span id="statusText" class="font-mono">Simulation Ready. Press Play to start heat transfer.</span>
+        </div>
+
+        <!-- Canvas Inspection Hint -->
+        <div class="absolute bottom-3 left-4 text-[11px] text-slate-400 bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800/80 pointer-events-none hidden sm:flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-pointer text-cyan-400"></i> Hover or click on either rod to inspect temperature profiles at specific positions
+        </div>
+      </div>
+
+      <!-- Playback Controls Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-md">
+        <div class="flex items-center gap-2">
+          <!-- Play / Pause -->
+          <button id="btnPlayPause" class="touch-target px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow flex items-center gap-2 transition">
+            <i class="fa-solid fa-play" id="iconPlay"></i>
+            <span id="labelPlay">Play</span>
+          </button>
+          
+          <!-- Step Forward (+0.5s) -->
+          <button id="btnStep" class="touch-target px-4 py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 text-slate-200 text-sm font-medium rounded-lg transition" title="Step forward 0.5 sec">
+            <i class="fa-solid fa-forward-step mr-1"></i> +0.5s
+          </button>
+          
+          <!-- Reset Simulation -->
+          <button id="btnReset" class="touch-target px-4 py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 text-slate-200 text-sm font-medium rounded-lg transition" title="Reset thermal state to ambient">
+            <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+          </button>
+        </div>
+
+        <!-- Speed Scaling Slider -->
+        <div class="flex items-center space-x-3 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <span class="text-xs text-slate-400 font-medium">Speed Multiplier:</span>
+          <input type="range" id="sliderSpeed" min="1" max="1000" step="1" value="100" class="w-28 accent-rose-500 cursor-pointer">
+          <span id="readoutSpeed" class="text-xs font-mono text-rose-300 w-12 text-right">100x</span>
+        </div>
+
+        <!-- Data Action Export -->
+        <div class="flex items-center gap-2">
+          <button id="btnCopyCSV" class="touch-target px-3.5 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> Export Sensor Data CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Control Parameters & Educational Telemetry -->
+    <div class="lg:col-span-4 xl:col-span-3 flex flex-col space-y-4 max-h-[85vh] overflow-y-auto pr-1">
+      
+      <!-- Live Sensor Telemetry Panel -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-gauge-high"></i> Rod Sensor Readouts
+          </h2>
+          <span class="text-[11px] bg-slate-950 text-amber-300 px-2 py-0.5 rounded border border-amber-900/40 font-mono font-medium" id="simTimeReadout">t = 0.0 s</span>
+        </div>
+
+        <!-- Selected Probe Point Temperature Inspector -->
+        <div class="bg-slate-950/70 p-3 rounded-lg border border-slate-800 mb-3 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-medium">Inspector Probe Position ($x$):</span>
+            <span class="font-mono text-cyan-300 font-semibold" id="probePosReadout">x = 0.25 m (50%)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+            <div class="bg-slate-900 p-2 rounded border border-indigo-900/50">
+              <div class="text-[10px] text-indigo-400 uppercase font-sans">Rod 1 Temp</div>
+              <div class="text-sm font-bold text-white" id="probeRod1Temp">20.0 °C</div>
+            </div>
+            <div class="bg-slate-900 p-2 rounded border border-emerald-900/50">
+              <div class="text-[10px] text-emerald-400 uppercase font-sans">Rod 2 Temp</div>
+              <div class="text-sm font-bold text-white" id="probeRod2Temp">20.0 °C</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed Sensor Stations along length -->
+        <div class="space-y-1.5 text-xs font-mono">
+          <div class="text-[10px] text-slate-400 font-sans uppercase font-semibold border-b border-slate-800 pb-1 flex justify-between">
+            <span>Station ($x / L$)</span>
+            <span>Rod 1 ($T_1$)</span>
+            <span>Rod 2 ($T_2$)</span>
+          </div>
+          <div class="flex justify-between items-center py-0.5">
+            <span class="text-slate-400">Quarter (25%)</span>
+            <span class="text-indigo-300" id="sens25Rod1">20.0 °C</span>
+            <span class="text-emerald-300" id="sens25Rod2">20.0 °C</span>
+          </div>
+          <div class="flex justify-between items-center py-0.5">
+            <span class="text-slate-400">Midpoint (50%)</span>
+            <span class="text-indigo-300" id="sens50Rod1">20.0 °C</span>
+            <span class="text-emerald-300" id="sens50Rod2">20.0 °C</span>
+          </div>
+          <div class="flex justify-between items-center py-0.5">
+            <span class="text-slate-400">Three-Qtr (75%)</span>
+            <span class="text-indigo-300" id="sens75Rod1">20.0 °C</span>
+            <span class="text-emerald-300" id="sens75Rod2">20.0 °C</span>
+          </div>
+          <div class="flex justify-between items-center py-0.5">
+            <span class="text-slate-400">Far End (100%)</span>
+            <span class="text-indigo-300" id="sens100Rod1">20.0 °C</span>
+            <span class="text-emerald-300" id="sens100Rod2">20.0 °C</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configurable Physics Parameters Panel -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
+          <i class="fa-solid fa-sliders"></i> Adjustable Physical Parameters
+        </h2>
+
+        <!-- Rod 1 Material Dropdown -->
+        <div class="space-y-1">
+          <label for="selectRod1Mat" class="text-xs text-indigo-300 font-semibold flex items-center gap-1.5">
+            <i class="fa-solid fa-grip-lines"></i> Rod 1 Material (Top)
+          </label>
+          <select id="selectRod1Mat" class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <!-- Populated via JS -->
+          </select>
+          <div class="text-[10px] text-slate-400 font-mono" id="infoRod1Mat">k = 398 W/m·K | α = 1.16×10⁻⁴ m²/s</div>
+        </div>
+
+        <!-- Rod 2 Material Dropdown -->
+        <div class="space-y-1">
+          <label for="selectRod2Mat" class="text-xs text-emerald-300 font-semibold flex items-center gap-1.5">
+            <i class="fa-solid fa-grip-lines"></i> Rod 2 Material (Bottom)
+          </label>
+          <select id="selectRod2Mat" class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            <!-- Populated via JS -->
+          </select>
+          <div class="text-[10px] text-slate-400 font-mono" id="infoRod2Mat">k = 16 W/m·K | α = 4.0×10⁻⁶ m²/s</div>
+        </div>
+
+        <!-- Left Heat Source Constant Temperature Slider -->
+        <div class="space-y-1 pt-1 border-t border-slate-800">
+          <div class="flex justify-between text-xs font-medium">
+            <label for="sliderSourceTemp" class="text-slate-300 flex items-center gap-1">
+              <i class="fa-solid fa-fire text-rose-500"></i> Left Source Temp ($T_{left}$)
+            </label>
+            <span id="readoutSourceTemp" class="font-mono text-rose-400 font-semibold">250 °C</span>
+          </div>
+          <input type="range" id="sliderSourceTemp" min="30" max="600" step="5" value="250" class="w-full accent-rose-500 cursor-pointer">
+        </div>
+
+        <!-- Ambient Base Temperature Slider -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs font-medium">
+            <label for="sliderAmbientTemp" class="text-slate-300">Ambient Temperature ($T_0$)</label>
+            <span id="readoutAmbientTemp" class="font-mono text-slate-300 font-semibold">20 °C</span>
+          </div>
+          <input type="range" id="sliderAmbientTemp" min="-10" max="40" step="1" value="20" class="w-full accent-slate-500 cursor-pointer">
+        </div>
+
+        <!-- Convective Environmental Heat Loss Slider -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs font-medium">
+            <label for="sliderHeatLoss" class="text-slate-300">Air Heat Loss Coeff ($h_{loss}$)</label>
+            <span id="readoutHeatLoss" class="font-mono text-cyan-300 font-semibold">0.00 (Insulated)</span>
+          </div>
+          <input type="range" id="sliderHeatLoss" min="0" max="0.05" step="0.002" value="0.00" class="w-full accent-cyan-500 cursor-pointer">
+        </div>
+
+        <!-- Right End Boundary Condition Selector -->
+        <div class="pt-2 border-t border-slate-800 space-y-2">
+          <span class="text-xs font-medium text-slate-300 block">Right End Boundary Condition:</span>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 bg-slate-950 p-2 rounded border border-slate-800 cursor-pointer">
+              <input type="radio" name="boundaryCond" value="insulated" checked class="accent-rose-500">
+              <span class="text-slate-200">Insulated End</span>
+            </label>
+            <label class="flex items-center gap-2 bg-slate-950 p-2 rounded border border-slate-800 cursor-pointer">
+              <input type="radio" name="boundaryCond" value="ambient" class="accent-rose-500">
+              <span class="text-slate-200">Fixed Ambient</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Visual Display Toggles -->
+        <div class="pt-2 border-t border-slate-800 space-y-2">
+          <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer py-0.5">
+            <span>Show Graph Overlay $T(x)$</span>
+            <input type="checkbox" id="chkShowGraph" checked class="w-4 h-4 accent-rose-500 rounded cursor-pointer">
+          </label>
+          <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer py-0.5">
+            <span>Show Numerical Values on Rods</span>
+            <input type="checkbox" id="chkShowValues" checked class="w-4 h-4 accent-rose-500 rounded cursor-pointer">
+          </label>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-medium transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+    Telemetry CSV exported to clipboard!
+  </div>
+
+  <!-- JavaScript Implementation -->
+  <script>
+    // ==========================================
+    // // CONFIG
+    // Global parameters, material properties, and simulation constants
+    // ==========================================
+    const CONFIG = {
+      // Physical Dimensions
+      rodLength: 0.50,         // Length of each rod in meters (0.50 m = 50 cm)
+      nodes: 100,              // Finite difference grid resolution along 1D rod
+      
+      // Thermal Boundary Conditions & Parameters
+      sourceTemp: 250,         // Left end constant heat source temperature (°C)
+      ambientTemp: 20,         // Ambient surrounding temperature (°C)
+      heatLossCoeff: 0.0,      // Convective cooling parameter h to ambient air
+      rightBoundary: 'insulated', // 'insulated' or 'ambient'
+
+      // Simulation Execution Parameters
+      timeScale: 100,          // Time speedup multiplier (100x real-time)
+      
+      // Visual Customizations
+      showGraphOverlay: true,
+      showRodValues: true,
+      probeXRatio: 0.50,       // Relative position of moveable temperature probe (0.0 to 1.0)
+
+      // Database of Physical Materials
+      materials: {
+        copper: {
+          name: 'Copper',
+          k: 398.0,            // Thermal Conductivity (W/m·K)
+          density: 8960,       // Density (kg/m³)
+          cp: 385,             // Specific Heat Capacity (J/kg·K)
+          diffusivity: 398.0 / (8960 * 385), // α = k / (ρ * c_p) ≈ 1.15 x 10^-4 m²/s
+          color: '#f97316'     // Visual material base accent color
+        },
+        aluminum: {
+          name: 'Aluminum',
+          k: 237.0,
+          density: 2700,
+          cp: 900,
+          diffusivity: 237.0 / (2700 * 900), // α ≈ 9.75 x 10^-5 m²/s
+          color: '#cbd5e1'
+        },
+        brass: {
+          name: 'Brass',
+          k: 115.0,
+          density: 8530,
+          cp: 380,
+          diffusivity: 115.0 / (8530 * 380), // α ≈ 3.55 x 10^-5 m²/s
+          color: '#eab308'
+        },
+        steel: {
+          name: 'Carbon Steel',
+          k: 50.0,
+          density: 7850,
+          cp: 490,
+          diffusivity: 50.0 / (7850 * 490), // α ≈ 1.30 x 10^-5 m²/s
+          color: '#94a3b8'
+        },
+        stainless: {
+          name: 'Stainless Steel',
+          k: 16.0,
+          density: 8000,
+          cp: 500,
+          diffusivity: 16.0 / (8000 * 500), // α ≈ 4.00 x 10^-6 m²/s
+          color: '#64748b'
+        },
+        glass: {
+          name: 'Glass',
+          k: 1.05,
+          density: 2500,
+          cp: 840,
+          diffusivity: 1.05 / (2500 * 840), // α ≈ 5.00 x 10^-7 m²/s
+          color: '#38bdf8'
+        },
+        wood: {
+          name: 'Wood (Oak)',
+          k: 0.17,
+          density: 700,
+          cp: 2300,
+          diffusivity: 0.17 / (700 * 2300), // α ≈ 1.05 x 10^-7 m²/s
+          color: '#a16207'
+        }
+      },
+
+      // Selected Material Keys for Rod 1 (Top) and Rod 2 (Bottom)
+      rod1Key: 'copper',
+      rod2Key: 'stainless'
+    };
+
+    // ==========================================
+    // // PHYSICS ENGINE
+    // Finite-difference 1D Heat Equation solver: dT/dt = alpha * d²T/dx² - h*(T - T_ambient)
+    // ==========================================
+    const state = {
+      isRunning: false,
+      simTime: 0,              // Accumulated physical time (seconds)
+      
+      // Temperature arrays along the discretized rod length
+      T1: new Float64Array(CONFIG.nodes), // Rod 1 temperatures (°C)
+      T2: new Float64Array(CONFIG.nodes), // Rod 2 temperatures (°C)
+
+      isHoveringCanvas: false,
+      isDraggingProbe: false
+    };
+
+    // Initialize/Reset physical arrays to initial state
+    function resetSimulationState() {
+      state.simTime = 0;
+      
+      // Set uniform temperature across both rods equal to ambient temperature
+      for (let i = 0; i < CONFIG.nodes; i++) {
+        state.T1[i] = CONFIG.ambientTemp;
+        state.T2[i] = CONFIG.ambientTemp;
+      }
+      
+      // Left boundary (x = 0) is attached to the constant heat source for both rods
+      state.T1[0] = CONFIG.sourceTemp;
+      state.T2[0] = CONFIG.sourceTemp;
+
+      updateUIReadouts();
+      updateStatusBanner("Simulation reset. Click Play to start heat conduction.", "idle");
+    }
+
+    // Step physics forward by dtSim seconds using Explicit Finite Difference
+    function stepThermalPhysics(dtSim) {
+      if (dtSim <= 0) return;
+
+      const N = CONFIG.nodes;
+      const dx = CONFIG.rodLength / (N - 1);
+      const dxSq = dx * dx;
+
+      const alpha1 = CONFIG.materials[CONFIG.rod1Key].diffusivity;
+      const alpha2 = CONFIG.materials[CONFIG.rod2Key].diffusivity;
+
+      // Determine sub-stepping count to maintain explicit numerical stability (Von Neumann condition: r = alpha * dt / dx² <= 0.4)
+      const maxAlpha = Math.max(alpha1, alpha2);
+      const maxDtSub = (0.4 * dxSq) / maxAlpha;
+      const subSteps = Math.max(1, Math.ceil(dtSim / maxDtSub));
+      const dtSub = dtSim / subSteps;
+
+      // Perform sub-steps
+      for (let s = 0; s < subSteps; s++) {
+        // Create temporal buffers for next state calculation
+        const nextT1 = new Float64Array(state.T1);
+        const nextT2 = new Float64Array(state.T2);
+
+        // Enforce Left Constant Temperature Heat Source (x = 0)
+        nextT1[0] = CONFIG.sourceTemp;
+        nextT2[0] = CONFIG.sourceTemp;
+
+        // Interior node finite-difference integration (i = 1 to N-2)
+        for (let i = 1; i < N - 1; i++) {
+          // Rod 1 1D Heat Diffusion + Environmental Convective Loss
+          const d2T1 = (state.T1[i + 1] - 2 * state.T1[i] + state.T1[i - 1]) / dxSq;
+          const loss1 = CONFIG.heatLossCoeff * (state.T1[i] - CONFIG.ambientTemp);
+          nextT1[i] = state.T1[i] + (alpha1 * d2T1 - loss1) * dtSub;
+
+          // Rod 2 1D Heat Diffusion + Environmental Convective Loss
+          const d2T2 = (state.T2[i + 1] - 2 * state.T2[i] + state.T2[i - 1]) / dxSq;
+          const loss2 = CONFIG.heatLossCoeff * (state.T2[i] - CONFIG.ambientTemp);
+          nextT2[i] = state.T2[i] + (alpha2 * d2T2 - loss2) * dtSub;
+        }
+
+        // Right Boundary Condition (x = L)
+        if (CONFIG.rightBoundary === 'insulated') {
+          // Neumann boundary: dT/dx = 0 -> T[N-1] = T[N-2]
+          nextT1[N - 1] = nextT1[N - 2];
+          nextT2[N - 1] = nextT2[N - 2];
+        } else {
+          // Dirichlet boundary: Fixed to ambient temperature
+          nextT1[N - 1] = CONFIG.ambientTemp;
+          nextT2[N - 1] = CONFIG.ambientTemp;
+        }
+
+        // Apply updated array states
+        state.T1.set(nextT1);
+        state.T2.set(nextT2);
+      }
+
+      state.simTime += dtSim;
+      updateUIReadouts();
+    }
+
+    // ==========================================
+    // // RENDERING
+    // Canvas setup, visual thermal gradient maps, and interactive graphics
+    // ==========================================
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+
+    function setupCanvasDPI() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = container.getBoundingClientRect();
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+    }
+
+    // Thermal color map generator: Maps Temperature (°C) to RGB Color
+    function tempToColor(temp) {
+      // Color keypoints: Ambient/Cold (Blue) -> Mild (Cyan) -> Warm (Yellow) -> Hot (Red) -> Extreme (White)
+      const minT = Math.min(20, CONFIG.ambientTemp);
+      const maxT = Math.max(300, CONFIG.sourceTemp);
+      let norm = (temp - minT) / (maxT - minT);
+      norm = Math.max(0, Math.min(1, norm));
+
+      let r = 0, g = 0, b = 0;
+      if (norm < 0.25) {
+        // Deep Blue to Cyan
+        const t = norm / 0.25;
+        r = Math.round(15 * (1 - t) + 6 * t);
+        g = Math.round(23 * (1 - t) + 182 * t);
+        b = Math.round(42 * (1 - t) + 212 * t);
+      } else if (norm < 0.50) {
+        // Cyan to Green-Yellow
+        const t = (norm - 0.25) / 0.25;
+        r = Math.round(6 * (1 - t) + 234 * t);
+        g = Math.round(182 * (1 - t) + 179 * t);
+        b = Math.round(212 * (1 - t) + 8 * t);
+      } else if (norm < 0.75) {
+        // Yellow to Deep Red/Orange
+        const t = (norm - 0.50) / 0.25;
+        r = Math.round(234 * (1 - t) + 239 * t);
+        g = Math.round(179 * (1 - t) + 68 * t);
+        b = Math.round(8 * (1 - t) + 68 * t);
+      } else {
+        // Orange-Red to Glowing Yellow/White
+        const t = (norm - 0.75) / 0.25;
+        r = Math.round(239 * (1 - t) + 255 * t);
+        g = Math.round(68 * (1 - t) + 245 * t);
+        b = Math.round(68 * (1 - t) + 225 * t);
+      }
+
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Main frame render cycle
+    function render() {
+      const rect = container.getBoundingClientRect();
+      const W = rect.width;
+      const H = rect.height;
+
+      // Clear dark background
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, W, H);
+
+      // Rod Geometry Bounds in Canvas Pixel Space
+      const leftMargin = 110;  // Space for constant heat source block on left
+      const rightMargin = 40;  // Right border padding
+      const rodWidth = Math.max(100, W - leftMargin - rightMargin);
+      const rodHeight = 36;    // Vertical thickness of each rod
+
+      const rod1Y = 80;        // Top Rod Y position
+      const rod2Y = 200;       // Bottom Rod Y position
+
+      // 1. Render Left Constant Heat Source Heat Sink Block
+      const sourceGradient = ctx.createLinearGradient(0, rod1Y - 20, leftMargin, rod2Y + rodHeight + 20);
+      sourceGradient.addColorStop(0, '#f43f5e');
+      sourceGradient.addColorStop(0.5, '#e11d48');
+      sourceGradient.addColorStop(1, '#be123c');
+
+      ctx.fillStyle = sourceGradient;
+      ctx.fillRect(15, rod1Y - 25, leftMargin - 25, (rod2Y + rodHeight + 25) - (rod1Y - 25));
+      ctx.strokeStyle = '#fda4af';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(15, rod1Y - 25, leftMargin - 25, (rod2Y + rodHeight + 25) - (rod1Y - 25));
+
+      // Heat Source Labeling
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('HEAT SOURCE', 15 + (leftMargin - 25) / 2, rod1Y - 8);
+      ctx.font = 'bold 16px Inter';
+      ctx.fillText(`${CONFIG.sourceTemp} °C`, 15 + (leftMargin - 25) / 2, (rod1Y + rod2Y + rodHeight) / 2 + 5);
+      ctx.font = '10px Inter';
+      ctx.fillStyle = '#fecdd3';
+      ctx.fillText('(Constant)', 15 + (leftMargin - 25) / 2, rod2Y + rodHeight + 15);
+
+      // 2. Render Rod 1 and Rod 2 1D Spatial Heat Maps
+      const dxPix = rodWidth / (CONFIG.nodes - 1);
+
+      // Helper function to draw a thermal rod
+      function drawThermalRod(TArray, yPos, matKey, titleLabel) {
+        // Material Name Header above rod
+        const matInfo = CONFIG.materials[matKey];
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 12px Inter';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${titleLabel}: ${matInfo.name}`, leftMargin, yPos - 12);
+        ctx.font = '10px Inter';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`k = ${matInfo.k} W/m·K`, leftMargin + 200, yPos - 12);
+
+        // Segmented gradient drawing along 1D nodes
+        for (let i = 0; i < CONFIG.nodes - 1; i++) {
+          const xStart = leftMargin + i * dxPix;
+          const tempCurrent = TArray[i];
+          const tempNext = TArray[i + 1];
+
+          // Sub-gradient for smooth thermal visual transition
+          const grad = ctx.createLinearGradient(xStart, 0, xStart + dxPix + 0.5, 0);
+          grad.addColorStop(0, tempToColor(tempCurrent));
+          grad.addColorStop(1, tempToColor(tempNext));
+
+          ctx.fillStyle = grad;
+          ctx.fillRect(xStart, yPos, dxPix + 0.5, rodHeight);
+        }
+
+        // Rod Outer Border
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(leftMargin, yPos, rodWidth, rodHeight);
+
+        // Right Boundary End Marker
+        const rightX = leftMargin + rodWidth;
+        if (CONFIG.rightBoundary === 'insulated') {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(rightX, yPos, 8, rodHeight);
+          ctx.strokeStyle = '#64748b';
+          ctx.strokeRect(rightX, yPos, 8, rodHeight);
+        } else {
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(rightX, yPos, 8, rodHeight);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeRect(rightX, yPos, 8, rodHeight);
+        }
+      }
+
+      drawThermalRod(state.T1, rod1Y, CONFIG.rod1Key, 'Rod 1 (Top)');
+      drawThermalRod(state.T2, rod2Y, CONFIG.rod2Key, 'Rod 2 (Bottom)');
+
+      // 3. Distance Axis Ruler (0 to 0.50m)
+      const rulerY = rod2Y + rodHeight + 24;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leftMargin, rulerY);
+      ctx.lineTo(leftMargin + rodWidth, rulerY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px Inter';
+      ctx.textAlign = 'center';
+
+      const ticks = 5;
+      for (let t = 0; t <= ticks; t++) {
+        const tickFrac = t / ticks;
+        const tickX = leftMargin + tickFrac * rodWidth;
+        const distMeters = (tickFrac * CONFIG.rodLength).toFixed(2);
+
+        ctx.beginPath();
+        ctx.moveTo(tickX, rulerY - 3);
+        ctx.lineTo(tickX, rulerY + 4);
+        ctx.stroke();
+
+        ctx.fillText(`${distMeters} m (${Math.round(tickFrac * 100)}%)`, tickX, rulerY + 16);
+      }
+
+      // 4. Moveable Temperature Inspector Probe Marker
+      const probePixX = leftMargin + CONFIG.probeXRatio * rodWidth;
+      
+      // Probe vertical dashed guideline
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(probePixX, rod1Y - 20);
+      ctx.lineTo(probePixX, rulerY + 30);
+      ctx.stroke();
+      ctx.restore();
+
+      // Probe handle icon on top
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.arc(probePixX, rod1Y - 20, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('P', probePixX, rod1Y - 17);
+
+      // Numerical overlay on rods if toggled
+      if (CONFIG.showRodValues) {
+        const probeIdx = Math.min(CONFIG.nodes - 1, Math.floor(CONFIG.probeXRatio * (CONFIG.nodes - 1)));
+        
+        // Rod 1 probe temperature badge
+        const t1Val = state.T1[probeIdx].toFixed(1);
+        ctx.fillStyle = '#0f172aee';
+        ctx.fillRect(probePixX - 30, rod1Y + 7, 60, 22);
+        ctx.strokeStyle = '#6366f1';
+        ctx.strokeRect(probePixX - 30, rod1Y + 7, 60, 22);
+        ctx.fillStyle = '#818cf8';
+        ctx.font = 'bold 11px Inter';
+        ctx.fillText(`${t1Val} °C`, probePixX, rod1Y + 22);
+
+        // Rod 2 probe temperature badge
+        const t2Val = state.T2[probeIdx].toFixed(1);
+        ctx.fillStyle = '#0f172aee';
+        ctx.fillRect(probePixX - 30, rod2Y + 7, 60, 22);
+        ctx.strokeStyle = '#10b981';
+        ctx.strokeRect(probePixX - 30, rod2Y + 7, 60, 22);
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 11px Inter';
+        ctx.fillText(`${t2Val} °C`, probePixX, rod2Y + 22);
+      }
+
+      // 5. Overlay Temperature Profile Graph T(x) at Bottom Half of Canvas
+      if (CONFIG.showGraphOverlay) {
+        const graphY0 = rulerY + 45;
+        const graphH = Math.max(80, H - graphY0 - 25);
+
+        if (graphH > 40) {
+          // Graph Background
+          ctx.fillStyle = '#0f172aee';
+          ctx.fillRect(leftMargin, graphY0, rodWidth, graphH);
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(leftMargin, graphY0, rodWidth, graphH);
+
+          // Graph Title
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '10px Inter';
+          ctx.textAlign = 'left';
+          ctx.fillText('Temperature Profile T(x) along Rod Length', leftMargin + 8, graphY0 + 14);
+
+          const minGTemp = Math.min(0, CONFIG.ambientTemp);
+          const maxGTemp = Math.max(100, CONFIG.sourceTemp);
+
+          // Helper to map temp to Graph Y pixel
+          function tempToGraphY(temp) {
+            const norm = (temp - minGTemp) / (maxGTemp - minGTemp);
+            return graphY0 + graphH - 8 - norm * (graphH - 24);
+          }
+
+          // Draw Ambient Baseline
+          const ambientY = tempToGraphY(CONFIG.ambientTemp);
+          ctx.save();
+          ctx.setLineDash([2, 2]);
+          ctx.strokeStyle = '#475569';
+          ctx.beginPath();
+          ctx.moveTo(leftMargin, ambientY);
+          ctx.lineTo(leftMargin + rodWidth, ambientY);
+          ctx.stroke();
+          ctx.restore();
+
+          // Plot Rod 1 Curve (Indigo)
+          ctx.beginPath();
+          ctx.strokeStyle = '#818cf8';
+          ctx.lineWidth = 2.5;
+          for (let i = 0; i < CONFIG.nodes; i++) {
+            const gx = leftMargin + (i / (CONFIG.nodes - 1)) * rodWidth;
+            const gy = tempToGraphY(state.T1[i]);
+            if (i === 0) ctx.moveTo(gx, gy);
+            else ctx.lineTo(gx, gy);
+          }
+          ctx.stroke();
+
+          // Plot Rod 2 Curve (Emerald)
+          ctx.beginPath();
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 2.5;
+          for (let i = 0; i < CONFIG.nodes; i++) {
+            const gx = leftMargin + (i / (CONFIG.nodes - 1)) * rodWidth;
+            const gy = tempToGraphY(state.T2[i]);
+            if (i === 0) ctx.moveTo(gx, gy);
+            else ctx.lineTo(gx, gy);
+          }
+          ctx.stroke();
+
+          // Graph Legend
+          ctx.fillStyle = '#818cf8';
+          ctx.fillRect(leftMargin + rodWidth - 140, graphY0 + 8, 10, 10);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '10px Inter';
+          ctx.fillText('Rod 1', leftMargin + rodWidth - 125, graphY0 + 16);
+
+          ctx.fillStyle = '#34d399';
+          ctx.fillRect(leftMargin + rodWidth - 70, graphY0 + 8, 10, 10);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText('Rod 2', leftMargin + rodWidth - 55, graphY0 + 16);
+        }
+      }
+    }
+
+    // ==========================================
+    // // UI & EVENTS
+    // DOM controls, parameter binding, and touch/mouse interaction handlers
+    // ==========================================
+
+    function updateUIReadouts() {
+      // Time readout
+      document.getElementById('simTimeReadout').textContent = `t = ${state.simTime.toFixed(1)} s`;
+
+      // Inspector probe index
+      const probeIdx = Math.min(CONFIG.nodes - 1, Math.floor(CONFIG.probeXRatio * (CONFIG.nodes - 1)));
+      const probeMeters = (CONFIG.probeXRatio * CONFIG.rodLength).toFixed(2);
+      const probePercent = Math.round(CONFIG.probeXRatio * 100);
+
+      document.getElementById('probePosReadout').textContent = `x = ${probeMeters} m (${probePercent}%)`;
+      document.getElementById('probeRod1Temp').textContent = `${state.T1[probeIdx].toFixed(1)} °C`;
+      document.getElementById('probeRod2Temp').textContent = `${state.T2[probeIdx].toFixed(1)} °C`;
+
+      // Station Readouts (25%, 50%, 75%, 100%)
+      const idx25 = Math.floor(0.25 * (CONFIG.nodes - 1));
+      const idx50 = Math.floor(0.50 * (CONFIG.nodes - 1));
+      const idx75 = Math.floor(0.75 * (CONFIG.nodes - 1));
+      const idx100 = CONFIG.nodes - 1;
+
+      document.getElementById('sens25Rod1').textContent = `${state.T1[idx25].toFixed(1)} °C`;
+      document.getElementById('sens25Rod2').textContent = `${state.T2[idx25].toFixed(1)} °C`;
+
+      document.getElementById('sens50Rod1').textContent = `${state.T1[idx50].toFixed(1)} °C`;
+      document.getElementById('sens50Rod2').textContent = `${state.T2[idx50].toFixed(1)} °C`;
+
+      document.getElementById('sens75Rod1').textContent = `${state.T1[idx75].toFixed(1)} °C`;
+      document.getElementById('sens75Rod2').textContent = `${state.T2[idx75].toFixed(1)} °C`;
+
+      document.getElementById('sens100Rod1').textContent = `${state.T1[idx100].toFixed(1)} °C`;
+      document.getElementById('sens100Rod2').textContent = `${state.T2[idx100].toFixed(1)} °C`;
+
+      // Controls readouts
+      document.getElementById('readoutSourceTemp').textContent = `${CONFIG.sourceTemp} °C`;
+      document.getElementById('readoutAmbientTemp').textContent = `${CONFIG.ambientTemp} °C`;
+      document.getElementById('readoutSpeed').textContent = `${CONFIG.timeScale}x`;
+      document.getElementById('readoutHeatLoss').textContent = CONFIG.heatLossCoeff === 0 ? '0.00 (Insulated)' : CONFIG.heatLossCoeff.toFixed(3);
+
+      // Material Info Badges
+      const mat1 = CONFIG.materials[CONFIG.rod1Key];
+      const mat2 = CONFIG.materials[CONFIG.rod2Key];
+      document.getElementById('infoRod1Mat').textContent = `k = ${mat1.k} W/m·K | α = ${mat1.diffusivity.toExponential(2)} m²/s`;
+      document.getElementById('infoRod2Mat').textContent = `k = ${mat2.k} W/m·K | α = ${mat2.diffusivity.toExponential(2)} m²/s`;
+    }
+
+    function updateStatusBanner(text, mode = "running") {
+      document.getElementById('statusText').textContent = text;
+      const dot = document.getElementById('statusDot');
+      if (mode === "running") {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+      } else if (mode === "paused") {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+      } else {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-slate-500";
+      }
+    }
+
+    function togglePlayPause() {
+      state.isRunning = !state.isRunning;
+      const btn = document.getElementById('btnPlayPause');
+      const icon = document.getElementById('iconPlay');
+      const label = document.getElementById('labelPlay');
+
+      if (state.isRunning) {
+        btn.className = "touch-target px-5 py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-semibold text-sm rounded-lg shadow flex items-center gap-2 transition";
+        icon.className = "fa-solid fa-pause";
+        label.textContent = "Pause";
+        updateStatusBanner("Heat transferring along rods...", "running");
+      } else {
+        btn.className = "touch-target px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow flex items-center gap-2 transition";
+        icon.className = "fa-solid fa-play";
+        label.textContent = "Play";
+        updateStatusBanner("Simulation paused.", "paused");
+      }
+    }
+
+    function populateMaterialDropdowns() {
+      const sel1 = document.getElementById('selectRod1Mat');
+      const sel2 = document.getElementById('selectRod2Mat');
+
+      sel1.innerHTML = '';
+      sel2.innerHTML = '';
+
+      Object.keys(CONFIG.materials).forEach(key => {
+        const mat = CONFIG.materials[key];
+        
+        const opt1 = document.createElement('option');
+        opt1.value = key;
+        opt1.textContent = `${mat.name} (k = ${mat.k} W/m·K)`;
+        if (key === CONFIG.rod1Key) opt1.selected = true;
+        sel1.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = key;
+        opt2.textContent = `${mat.name} (k = ${mat.k} W/m·K)`;
+        if (key === CONFIG.rod2Key) opt2.selected = true;
+        sel2.appendChild(opt2);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    function attachEventListeners() {
+      // Play / Pause / Reset / Step
+      document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
+      document.getElementById('btnReset').addEventListener('click', () => {
+        if (state.isRunning) togglePlayPause();
+        resetSimulationState();
+      });
+      document.getElementById('btnStep').addEventListener('click', () => {
+        if (state.isRunning) togglePlayPause();
+        stepThermalPhysics(0.5);
+        render();
+      });
+
+      // Material Selectors
+      document.getElementById('selectRod1Mat').addEventListener('change', (e) => {
+        CONFIG.rod1Key = e.target.value;
+        updateUIReadouts();
+        render();
+      });
+      document.getElementById('selectRod2Mat').addEventListener('change', (e) => {
+        CONFIG.rod2Key = e.target.value;
+        updateUIReadouts();
+        render();
+      });
+
+      // Parameter Sliders
+      document.getElementById('sliderSourceTemp').addEventListener('input', (e) => {
+        CONFIG.sourceTemp = parseFloat(e.target.value);
+        state.T1[0] = CONFIG.sourceTemp;
+        state.T2[0] = CONFIG.sourceTemp;
+        updateUIReadouts();
+        render();
+      });
+
+      document.getElementById('sliderAmbientTemp').addEventListener('input', (e) => {
+        CONFIG.ambientTemp = parseFloat(e.target.value);
+        if (!state.isRunning && state.simTime === 0) {
+          resetSimulationState();
+        } else {
+          updateUIReadouts();
+          render();
+        }
+      });
+
+      document.getElementById('sliderSpeed').addEventListener('input', (e) => {
+        CONFIG.timeScale = parseFloat(e.target.value);
+        updateUIReadouts();
+      });
+
+      document.getElementById('sliderHeatLoss').addEventListener('input', (e) => {
+        CONFIG.heatLossCoeff = parseFloat(e.target.value);
+        updateUIReadouts();
+      });
+
+      // Right Boundary Radio Buttons
+      document.querySelectorAll('input[name="boundaryCond"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          CONFIG.rightBoundary = e.target.value;
+          render();
+        });
+      });
+
+      // Display Toggles
+      document.getElementById('chkShowGraph').addEventListener('change', (e) => {
+        CONFIG.showGraphOverlay = e.target.checked;
+        render();
+      });
+      document.getElementById('chkShowValues').addEventListener('change', (e) => {
+        CONFIG.showRodValues = e.target.checked;
+        render();
+      });
+
+      // Preset Handlers
+      document.getElementById('presetCuSt').addEventListener('click', () => {
+        CONFIG.rod1Key = 'copper';
+        CONFIG.rod2Key = 'stainless';
+        populateMaterialDropdowns();
+        resetSimulationState();
+      });
+      document.getElementById('presetAlGl').addEventListener('click', () => {
+        CONFIG.rod1Key = 'aluminum';
+        CONFIG.rod2Key = 'glass';
+        populateMaterialDropdowns();
+        resetSimulationState();
+      });
+      document.getElementById('presetCuAl').addEventListener('click', () => {
+        CONFIG.rod1Key = 'copper';
+        CONFIG.rod2Key = 'aluminum';
+        populateMaterialDropdowns();
+        resetSimulationState();
+      });
+      document.getElementById('presetBrWd').addEventListener('click', () => {
+        CONFIG.rod1Key = 'brass';
+        CONFIG.rod2Key = 'wood';
+        populateMaterialDropdowns();
+        resetSimulationState();
+      });
+
+      // Export CSV Data
+      document.getElementById('btnCopyCSV').addEventListener('click', () => {
+        const mat1 = CONFIG.materials[CONFIG.rod1Key].name;
+        const mat2 = CONFIG.materials[CONFIG.rod2Key].name;
+        
+        let csv = `# 1D Heat Conduction Simulation Telemetry\n`;
+        csv += `# Time: ${state.simTime.toFixed(1)} s | Heat Source: ${CONFIG.sourceTemp} °C\n`;
+        csv += `# Rod 1: ${mat1} | Rod 2: ${mat2}\n`;
+        csv += `Position_m,Rod1_Temp_C,Rod2_Temp_C\n`;
+
+        for (let i = 0; i < CONFIG.nodes; i++) {
+          const x = (i / (CONFIG.nodes - 1) * CONFIG.rodLength).toFixed(3);
+          csv += `${x},${state.T1[i].toFixed(2)},${state.T2[i].toFixed(2)}\n`;
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = csv;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        showToast("Telemetry CSV copied to clipboard!");
+      });
+
+      // Canvas Pointer Dragging for Temperature Probe Inspector
+      function handlePointer(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const mouseX = clientX - rect.left;
+
+        const leftMargin = 110;
+        const rodWidth = Math.max(100, rect.width - leftMargin - 40);
+
+        let ratio = (mouseX - leftMargin) / rodWidth;
+        ratio = Math.max(0, Math.min(1, ratio));
+
+        CONFIG.probeXRatio = ratio;
+        updateUIReadouts();
+        render();
+      }
+
+      canvas.addEventListener('mousedown', (e) => {
+        state.isDraggingProbe = true;
+        handlePointer(e);
+      });
+      canvas.addEventListener('mousemove', (e) => {
+        if (state.isDraggingProbe) handlePointer(e);
+      });
+      window.addEventListener('mouseup', () => {
+        state.isDraggingProbe = false;
+      });
+
+      canvas.addEventListener('touchstart', (e) => {
+        state.isDraggingProbe = true;
+        handlePointer(e);
+      }, { passive: false });
+      canvas.addEventListener('touchmove', (e) => {
+        if (state.isDraggingProbe) handlePointer(e);
+      }, { passive: false });
+      window.addEventListener('touchend', () => {
+        state.isDraggingProbe = false;
+      });
+
+      window.addEventListener('resize', () => {
+        setupCanvasDPI();
+        render();
+      });
+    }
+
+    // ==========================================
+    // // ANIMATION LOOP
+    // Delta-time driven requestAnimationFrame loop
+    // ==========================================
+    let lastFrameTime = performance.now();
+
+    function animationLoop(now) {
+      const rawDt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+
+      // Clamp max raw delta-time to avoid extreme skips when switching browser tabs
+      const dtClamped = Math.min(rawDt, 0.05);
+
+      if (state.isRunning) {
+        const dtSim = dtClamped * CONFIG.timeScale;
+        stepThermalPhysics(dtSim);
+      }
+
+      render();
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Initialize application on window load
+    window.onload = function () {
+      setupCanvasDPI();
+      populateMaterialDropdowns();
+      attachEventListeners();
+      resetSimulationState();
+      requestAnimationFrame(animationLoop);
+    };
+  </script>
+</body>
+</html>
